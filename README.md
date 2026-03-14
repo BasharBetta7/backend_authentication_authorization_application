@@ -1,5 +1,4 @@
-Implementing Backend application with authorization and authentication logic.
-
+# Implementing Backend application with authorization and authentication logic.
 ## Tables:
 - Users:
     - id PrimaryKEY (PK)
@@ -11,7 +10,6 @@ Implementing Backend application with authorization and authentication logic.
     -  id PK
     -  name unique(str)
     -  description str
-
 
 - UserRoles:
     -  id PK
@@ -50,8 +48,6 @@ Implementing Backend application with authorization and authentication logic.
     - is_revoked boolean == False
     - created_at TIMESTAMP
     - revoked_at TIMESTAMP
-    
-
 
 ## Modules:
 - User Module:

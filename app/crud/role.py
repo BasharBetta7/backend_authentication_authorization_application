@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.db.models.role import Role
-from app.schemas.role import RoleCreate, RoleUpdate, RoleDelete
+from app.schemas.role import RoleCreate, RoleUpdate
 
 def create_role(db: Session, payload:RoleCreate) -> Role:
     obj = Role(**payload.model_dump())

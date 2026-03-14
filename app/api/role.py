@@ -18,7 +18,10 @@ def list_all(db:Session = Depends(get_db)):
 
 @router.get("/{role_id}", response_model=RoleRead)
 def get_one(role_id:int, db: Session = Depends(get_db)):
-    return get_role(db, role_id)
+    role = get_role(db, role_id)
+    if not role :
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
+    return role
 
 @router.patch("/{role_id}", response_model=RoleRead)
 def update_one(role_id:int, payload:RoleUpdate, db:Session= Depends(get_db)):
@@ -31,5 +34,5 @@ def update_one(role_id:int, payload:RoleUpdate, db:Session= Depends(get_db)):
 def delete_one(role_id: int, db: Session = Depends(get_db)):
     role = get_role(db, role_id)
     if not role:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rolw not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Role not found")
     delete_role(db, role)

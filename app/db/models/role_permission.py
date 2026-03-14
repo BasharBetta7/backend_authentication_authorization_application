@@ -8,8 +8,8 @@ class RolePermission(BaseModel):
     __tablename__ = "role_permissions"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    role_id : Mapped[str] = mapped_column(ForeignKey("roles.id"), index=True)
-    permission_id : Mapped[str] = mapped_column(ForeignKey("permissions.id"), index= True)
+    role_id : Mapped[int] = mapped_column(ForeignKey("roles.id"), index=True)
+    permission_id : Mapped[int] = mapped_column(ForeignKey("permissions.id"), index= True)
 
     role = relationship("Role")
     permission = relationship("Permission")

@@ -15,5 +15,5 @@ class RolePermission(BaseModel):
     permission = relationship("Permission")
 
     __table_args__ = (
-        UniqueConstraint("role_id", "permission_id", name="unq_role_permission")   
+        UniqueConstraint("role_id", "permission_id", name="unq_role_permission"), 
     )

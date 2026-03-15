@@ -19,6 +19,9 @@ class ActionRead(ActionBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
 
+class ActionShortRead(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
 
 class ActionDelete(BaseModel):
     id: int

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 
-from app.crud.user import create_user, delete_user, list_users, get_user, update_user
+from app.crud.user import create_user, delete_user, list_users, get_user, update_user,soft_delete_user
 from app.db.session import get_db
 from app.schemas.user import UserCreate, UserRead, UserUpdate, UserDelete
 
@@ -36,4 +36,12 @@ def delete_one(user_id: int, db:Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     delete_user(db, user)
 
-    
+@router.delete("/soft/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def soft_delete_one(user_id: int, db:Session = Depends(get_db)):
+    user = get_user(db, user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    soft_delete_user(db, user)
+
+
+

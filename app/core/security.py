@@ -6,6 +6,9 @@ import os
 import secrets
 import time
 
+from jose import jwt 
+
+
 
 _ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv("ACCESS_TOKEN_EXPIRE_SECONDS", "3600"))
 _AUTH_SECRET = os.getenv("AUTH_SECRET", "change-me-in-production")

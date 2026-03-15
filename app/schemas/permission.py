@@ -1,5 +1,8 @@
 from pydantic import BaseModel, ConfigDict, Field
 
+from app.schemas.resource import ResourceShortRead
+from app.schemas.action import ActionShortRead
+
 
 class PermissionBase(BaseModel):
     resource_id: int
@@ -19,6 +22,8 @@ class PermissionUpdate(BaseModel):
 
 class PermissionRead(PermissionBase):
     id: int
+    resource: ResourceShortRead | None = None
+    action: ActionShortRead | None = None
     model_config = ConfigDict(from_attributes=True)
 
 

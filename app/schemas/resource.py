@@ -19,6 +19,9 @@ class ResourceRead(ResourceBase):
     id: int
     model_config = ConfigDict(from_attributes=True)
 
+class ResourceShortRead(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+
 
 class ResourceDelete(BaseModel):
     id: int

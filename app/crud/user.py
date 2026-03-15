@@ -37,3 +37,8 @@ def update_user(db:Session, user:User, payload:UserUpdate) -> User:
 def delete_user(db:Session, user:User) -> None:
     db.delete(user)
     db.commit()
+
+def soft_delete_user(db:Session, user:User) -> User:
+    user.is_active = False
+    db.refresh(user)
+    return user

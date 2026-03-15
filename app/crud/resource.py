@@ -20,6 +20,10 @@ def get_resource(db: Session, resource_id: int) -> Resource | None:
     return db.query(Resource).filter(Resource.id == resource_id).first()
 
 
+def get_resource_by_name(db: Session, name: str) -> Resource | None:
+    return db.query(Resource).filter(Resource.name == name).first()
+
+
 def update_resource(db: Session, resource: Resource, payload: ResourceUpdate) -> Resource:
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(resource, k, v)

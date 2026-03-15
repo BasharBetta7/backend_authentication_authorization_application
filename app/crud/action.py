@@ -20,6 +20,10 @@ def get_action(db: Session, action_id: int) -> Action | None:
     return db.query(Action).filter(Action.id == action_id).first()
 
 
+def get_action_by_name(db: Session, name: str) -> Action | None:
+    return db.query(Action).filter(Action.name == name).first()
+
+
 def update_action(db: Session, action: Action, payload: ActionUpdate) -> Action:
     for k, v in payload.model_dump(exclude_unset=True).items():
         setattr(action, k, v)

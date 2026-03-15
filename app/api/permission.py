@@ -13,6 +13,7 @@ def create(payload:PermissionCreate, db:Session = Depends(get_db)):
 
 @router.get("/", response_model=list[PermissionRead])
 def get_all(db:Session = Depends(get_db)):
+    print(list_permissions(db))
     return list_permissions(db)
 
 @router.get("/{permission_id}", response_model=PermissionRead)

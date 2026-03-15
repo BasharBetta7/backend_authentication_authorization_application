@@ -1,7 +1,9 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.schemas.permission import PermissionCreate, PermissionUpdate, PermissionDelete
 from app.db.models.permission import Permission
+from app.crud.resource import get_resource_by_name
+from app.crud.action import get_action_by_name
 
 def create_permission(db:Session, payload:PermissionCreate) -> Permission:
     obj = Permission(**payload.model_dump())
@@ -16,14 +18,6 @@ def list_permissions(db:Session) -> list[Permission] | None:
 
 def get_permission(db:Session, permission_id:int) -> Permission | None:
     return db.query(Permission).filter(Permission.id == permission_id).first()
-
-
-def update_permission(db:Session, permission:Permission, payload:PermissionUpdate) -> Permission:
-    for k,v in payload.model_dump(exclude_unset=True).items():
-        setattr(permission, k, v)
-    db.commit()
-    db.refresh(permission)
-    return permission
 
 
 def delete_permission(db:Session, permission:Permission) -> None:

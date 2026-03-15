@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 
-from app.core.auth import get_current_user
+from app.core.auth import get_current_user, require_permission
 from app.crud.user import create_user, delete_user, list_users, get_user, update_user,soft_delete_user
 from app.db.session import get_db
 from app.schemas.user import UserCreate, UserRead, UserUpdate, UserDelete
@@ -19,7 +19,8 @@ def get_all( db:Session = Depends(get_db)):
     return list_users(db)
 
 @router.get("/me", response_model=UserRead)
-def get_current_one(current_user: User= Depends(get_current_user), db:Session = Depends(get_db)):
+def get_current_one(current_user: User = Depends(require_permission("users", "read", "own")), db: Session = Depends(get_db)):
+    """Get current user's profile - requires users:read:own permission"""
     return current_user
 
 @router.get("/{user_id}", response_model=UserRead)
@@ -37,14 +38,14 @@ def upate(user_id:int, payload:UserUpdate, current_user = Depends(get_current_us
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not Found")
     return update_user(db, user, payload)
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/hard/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_one(user_id: int, db:Session = Depends(get_db)):
     user = get_user(db, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     delete_user(db, user)
 
-@router.delete("/soft/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def soft_delete_one(user_id: int, db:Session = Depends(get_db)):
     user = get_user(db, user_id)
     if not user:
@@ -52,4 +53,6 @@ def soft_delete_one(user_id: int, db:Session = Depends(get_db)):
     soft_delete_user(db, user)
 
 
-
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+def delete_me(current_user: User = Depends(get_current_user), db:Session = Depends(get_db)):
+    soft_delete_user(db, current_user)

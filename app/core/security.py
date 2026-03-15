@@ -5,9 +5,9 @@ import json
 import os
 import secrets
 import time
+from datetime import datetime, timedelta
 
 from jose import jwt 
-
 
 
 _ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv("ACCESS_TOKEN_EXPIRE_SECONDS", "3600"))
@@ -45,19 +45,17 @@ def verify_password(password: str, password_hash: str) -> bool:
     return hmac.compare_digest(derived_key, expected)
 
 
-def create_access_token(user_id: int, email: str) -> str:
-    header = {"alg": "HS256", "typ": "JWT"}
-    now = int(time.time())
-    payload = {
-        "sub": str(user_id),
-        "email": email,
-        "iat": now,
-        "exp": now + _ACCESS_TOKEN_EXPIRE_SECONDS,
-    }
+def create_access_token(data: dict) -> str:
+    """Create JWT access token - easiest way!"""
+    expire = datetime.utcnow() + timedelta(seconds=_ACCESS_TOKEN_EXPIRE_SECONDS)
+    data_copy = data.copy()
+    data_copy.update({"exp": expire})
+    return jwt.encode(data_copy, _AUTH_SECRET, algorithm="HS256")
 
-    header_b64 = _b64url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
-    payload_b64 = _b64url_encode(json.dumps(payload, separators=(",", ":")).encode("utf-8"))
-    signing_input = f"{header_b64}.{payload_b64}".encode("utf-8")
-    signature = hmac.new(_AUTH_SECRET.encode("utf-8"), signing_input, hashlib.sha256).digest()
-    signature_b64 = _b64url_encode(signature)
-    return f"{header_b64}.{payload_b64}.{signature_b64}"
+
+def verify_access_token(token: str) -> dict | None:
+    """Verify and decode JWT access token - easiest way!"""
+    try:
+        return jwt.decode(token, _AUTH_SECRET, algorithms=["HS256"])
+    except jwt.JWTError:
+        return None

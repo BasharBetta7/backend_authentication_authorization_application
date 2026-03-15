@@ -14,6 +14,7 @@ from .role_permission import (
     RolePermissionUpdate,
 )
 from .user import UserBase, UserCreate, UserDelete, UserLogin, UserRead, UserUpdate
+from .auth import SignupRequest, TokenResponse
 from .user_role import (
     UserRoleBase,
     UserRoleCreate,
@@ -40,6 +41,8 @@ __all__ = [
     "RoleRead",
     "RoleUpdate",
     "UserBase",
+    "SignupRequest",
+    "TokenResponse",
     "UserCreate",
     "UserDelete",
     "UserLogin",

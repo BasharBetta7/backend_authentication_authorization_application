@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import datetime
 
-from app.core.security import create_access_token, verify_password
+from app.core.security import create_access_token, verify_password, create_refresh_token
+from app.core.auth import get_current_user
 from app.crud.user import create_user, get_user_by_email
 from app.db.session import get_db
 from app.schemas.auth import SignupRequest, TokenResponse
 from app.schemas.user import UserLogin, UserRead
+from app.db.models.refresh_token import RefreshToken
+
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -26,4 +30,11 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Inactive user")
 
     access_token = create_access_token(data={"sub": str(user.id), "email": user.email})
-    return TokenResponse(access_token=access_token)
+    refresh_token, jti, expire = create_refresh_token(user.id)
+    db.add(
+        RefreshToken(user_id = user.id, token=refresh_token, expires_at = expire, created_at = datetime.now())
+    )
+    db.commit()
+    
+    return TokenResponse(access_token=access_token, refresh_token=refresh_token)
+

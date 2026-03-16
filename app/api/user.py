@@ -18,12 +18,12 @@ def create(payload:UserCreate, db:Session = Depends(get_db)):
 def get_all( db:Session = Depends(get_db)):
     return list_users(db)
 
-@router.get("/me", response_model=UserRead)
-def get_current_one(current_user: User = Depends(require_permission("users", "read", "own")), db: Session = Depends(get_db)):
+@router.get("/me", response_model=UserRead, dependencies=[Depends(require_permission('users','read','own'))])
+def get_current_one(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """Get current user's profile - requires users:read:own permission"""
     return current_user
 
-@router.get("/{user_id}", response_model=UserRead)
+@router.get("/{user_id:int}", response_model=UserRead)
 def get_one(user_id:int, current_user: User = Depends(get_current_user), db:Session = Depends(get_db)):
     user = get_user(db, user_id)
     print(current_user.first_name)
@@ -31,28 +31,33 @@ def get_one(user_id:int, current_user: User = Depends(get_current_user), db:Sess
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No user Found")
     return user 
 
-@router.patch("/{user_id}", response_model=UserRead)
+@router.patch("/{user_id:int}", response_model=UserRead)
 def upate(user_id:int, payload:UserUpdate, current_user = Depends(get_current_user), db:Session = Depends(get_db)):
     user = get_user(db, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not Found")
     return update_user(db, user, payload)
 
-@router.delete("/hard/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/hard/{user_id:int}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_one(user_id: int, db:Session = Depends(get_db)):
     user = get_user(db, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     delete_user(db, user)
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT, )
+def delete_me(current_user: User = Depends(get_current_user),
+              db:Session = Depends(get_db),
+              _:None = Depends(require_permission("users","delete","own"))):
+    print(current_user)
+    soft_delete_user(db, current_user)
+
+
+@router.delete("/{user_id:int}", status_code=status.HTTP_204_NO_CONTENT)
 def soft_delete_one(user_id: int, db:Session = Depends(get_db)):
     user = get_user(db, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     soft_delete_user(db, user)
 
-
-@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
-def delete_me(current_user: User = Depends(get_current_user), db:Session = Depends(get_db)):
-    soft_delete_user(db, current_user)

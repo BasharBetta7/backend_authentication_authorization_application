@@ -5,7 +5,7 @@ class UserBase(BaseModel):
     first_name: str = Field(min_length=1, max_length=100)
     last_name: str | None = Field(default=None, max_length=100)
     email: EmailStr
-    is_active: bool = True
+
 
 
 class UserCreate(UserBase):
@@ -22,6 +22,7 @@ class UserUpdate(BaseModel):
 
 class UserRead(UserBase):
     id: int
+    is_active: bool 
     model_config = ConfigDict(from_attributes=True) # can read user directly and convert it to dict
 
 

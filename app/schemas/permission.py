@@ -9,9 +9,12 @@ class PermissionBase(BaseModel):
     action_id: int
     scope: str = Field(default="own", min_length=1, max_length=100)
 
-
 class PermissionCreate(PermissionBase):
     pass
+class PermissionCreateByName(BaseModel):
+    resource_name: str
+    action_name :str
+    scope: str = Field(default="own", min_length=1, max_length=100)
 
 
 class PermissionUpdate(BaseModel):

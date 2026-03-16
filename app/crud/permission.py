@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session, joinedload
 
-from app.schemas.permission import PermissionCreate, PermissionUpdate, PermissionDelete
+from app.schemas.permission import PermissionCreate, PermissionUpdate, PermissionDelete, PermissionCreateByName
 from app.db.models.permission import Permission
 from app.crud.resource import get_resource_by_name
 from app.crud.action import get_action_by_name
@@ -11,6 +11,18 @@ def create_permission(db:Session, payload:PermissionCreate) -> Permission:
     db.commit()
     db.refresh(obj)
     return obj
+
+def create_permission_by_name(db:Session, payload:PermissionCreateByName) -> Permission:
+    resource = get_resource_by_name(db, payload.resource_name)
+    action = get_action_by_name(db, payload.action_name)
+    scope = payload.scope
+
+    obj = Permission(resource_id=resource.id, action_id=action.id, scope=scope)
+    db.add(obj)
+    db.commit()
+    db.refresh(obj)
+    return obj
+
 
 
 def list_permissions(db:Session) -> list[Permission] | None:

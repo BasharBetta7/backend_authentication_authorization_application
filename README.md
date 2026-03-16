@@ -79,4 +79,4 @@ scope: own, any
 
 users.get(db, user_id, current_user) -> users:read:{user_id}|current_user
 
-when performing request to endpoint, we will include Authorization: Bearer <token> header. token will be extracted from accessing auth/login endpoint, which fetches the token of the current user. Request then are processed based on the token passed to determine permissions and respond. 
+when performing request to endpoint, we will include Authorization: Bearer <token> header. token will be extracted from accessing auth/login endpoint, which fetches the token of the current user. Request then are processed based on the token passed to determine permissions and respond.

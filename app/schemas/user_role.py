@@ -1,5 +1,9 @@
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.user import UserRead
+from app.schemas.role import RoleRead
+
+
 
 class UserRoleBase(BaseModel):
     user_id: int
@@ -16,6 +20,8 @@ class UserRoleUpdate(BaseModel):
 
 
 class UserRoleRead(UserRoleBase):
+    user: UserRead
+    role: RoleRead
     model_config = ConfigDict(from_attributes=True)
 
 

@@ -34,7 +34,6 @@ def get_current_user(
         )
     
     # Get user from database
-    print(user_id)
     user = get_user(db, int(user_id))
     if not user:
         raise HTTPException(

@@ -12,7 +12,6 @@ class SignupRequest(UserCreate):
             raise ValueError("Passwords do not match")
         return self
 
-
 class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
@@ -21,3 +20,5 @@ class TokenResponse(BaseModel):
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
+
+

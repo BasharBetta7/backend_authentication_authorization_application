@@ -1,5 +1,8 @@
 from pydantic import BaseModel, ConfigDict
 
+from app.schemas.role import RoleRead
+from app.schemas.permission import PermissionRead
+
 
 class RolePermissionBase(BaseModel):
     role_id: int
@@ -17,6 +20,8 @@ class RolePermissionUpdate(BaseModel):
 
 class RolePermissionRead(RolePermissionBase):
     id: int
+    role: RoleRead
+    permission: PermissionRead
     model_config = ConfigDict(from_attributes=True)
 
 

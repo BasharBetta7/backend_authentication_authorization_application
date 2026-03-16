@@ -22,7 +22,7 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 
 from app.db.base import BaseModel
-from app.db.models import User, Role, UserRole, Resource, Action, Permission, RolePermission, RefreshToken
+from app.db.models import User, Role, UserRole, Resource, Action, Permission, RolePermission, RefreshToken, Event
 
 
 target_metadata = BaseModel.metadata

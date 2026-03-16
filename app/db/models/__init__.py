@@ -6,3 +6,4 @@ from .action import Action
 from .permission import Permission
 from .role_permission import RolePermission
 from .refresh_token import RefreshToken
+from .event import Event

@@ -1,18 +1,17 @@
 import base64
 import hashlib
 import hmac
-import json
 import os
 import secrets
-import time
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-from jose import jwt 
+from jose import JWTError, jwt
 
 
 
 _ACCESS_TOKEN_EXPIRE_SECONDS = int(os.getenv("ACCESS_TOKEN_EXPIRE_SECONDS", "60"))
+_REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "1"))
 _AUTH_SECRET = os.getenv("AUTH_SECRET", "change-me-in-production")
 _PBKDF2_ITERATIONS = int(os.getenv("PASSWORD_HASH_ITERATIONS", "120000"))
 
@@ -55,28 +54,36 @@ def create_access_token(data: dict) -> str:
     return jwt.encode(data_copy, _AUTH_SECRET, algorithm="HS256")
 
 def create_refresh_token(subject: str | int) -> tuple[str, str, datetime]:
-    now = datetime.now()
-    expire = datetime.now() + timedelta(days=1)
+    now = datetime.utcnow()
+    expire = now + timedelta(days=_REFRESH_TOKEN_EXPIRE_DAYS)
     jti = str(uuid4())
 
     payload = {
         "sub": str(subject),
         "jti": jti,
         "type": "refresh",
-        "iat" : now, 
-        "exp" : expire
+        "iat": now,
+        "exp": expire,
     }
-    token = jwt.encode(payload, _AUTH_SECRET , algorithm="HS256")
+    token = jwt.encode(payload, _AUTH_SECRET, algorithm="HS256")
     return token, jti, expire
-
-
 
 
 def verify_access_token(token: str) -> dict | None:
     """Verify and decode JWT access token - easiest way!"""
     try:
         return jwt.decode(token, _AUTH_SECRET, algorithms=["HS256"])
-    except jwt.JWTError:
+    except JWTError:
         return None
 
+
+def verify_refresh_token(token: str) -> dict | None:
+    try:
+        payload = jwt.decode(token, _AUTH_SECRET, algorithms=["HS256"])
+    except JWTError:
+        return None
+
+    if payload.get("type") != "refresh":
+        return None
+    return payload
 

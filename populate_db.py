@@ -257,6 +257,7 @@ def main() -> None:
             (users["user_2"].id, roles["admin"].id),
             (users["user_3"].id, roles["superuser"].id),
         }
+        user_roles = {"user_1":"user", "user_2":"admin", "user_3":"superuser"}
         sync_user_roles(db, desired_user_role_pairs)
 
         # 7) Role-permission assignments from README matrix
@@ -268,7 +269,7 @@ def main() -> None:
         db.commit()
         print("USERS CREDENTIALS: ")
         for k,v in users.items():
-            print(f"{k} : email:{v.email}, password: {(v.first_name.lower())}")
+            print(f"{k} : email:{v.email}, password: {(v.first_name.lower())}, role: {user_roles[k]}")
         print("*"*100)
 
 

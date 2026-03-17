@@ -160,7 +160,7 @@ Role-permission mappings are populated by `populate_db.py`.
 1. Clone and enter the project
 ```bash
 git clone <your-repo-url>
-cd AuthBackEnd
+cd backend_authentication_authorization_application
 ```
 
 2. Create and activate virtual environment
@@ -171,7 +171,7 @@ source .venv/bin/activate
 
 3. Install dependencies
 ```bash
-pip install -r requirements.txt
+.venv/bin/pip install -r requirements.txt
 ```
 
 4. Run database migrations

@@ -22,7 +22,8 @@ def create(payload: RolePermissionCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/", response_model=list[RolePermissionRead],
-            dependencies=[Depends(require_permission('permission-roles','read','any'))])
+            # dependencies=[Depends(require_permission('permission-roles','read','any'))]
+)
 def get_all(db: Session = Depends(get_db)):
     return list_permission_roles(db)
 
@@ -37,7 +38,7 @@ def get_one(permission_role_id: int, db: Session = Depends(get_db)):
 
 
 @router.patch("/{permission_role_id}", response_model=RolePermissionRead,
-              dependencies=[Depends(require_permission('permission-role','update','any'))])
+              dependencies=[Depends(require_permission('permission-roles','update','any'))])
 def update_one(permission_role_id: int, payload: RolePermissionUpdate, db: Session = Depends(get_db)):
     permission_role = get_permission_role(db, permission_role_id)
     if not permission_role:
@@ -46,7 +47,7 @@ def update_one(permission_role_id: int, payload: RolePermissionUpdate, db: Sessi
 
 
 @router.delete("/{permission_role_id}", status_code=status.HTTP_204_NO_CONTENT,
-               dependencies=[Depends(require_permission('permission-role','delete','any'))])
+               dependencies=[Depends(require_permission('permission-roles','delete','any'))])
 def delete_one(permission_role_id: int, db: Session = Depends(get_db)):
     permission_role = get_permission_role(db, permission_role_id)
     if not permission_role:

@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from sqlalchemy.orm import Session
 
 from app.core.auth import get_current_user, require_permission
-from app.crud.user import create_user, delete_user, list_users, get_user, update_user,soft_delete_user
+from app.crud.user import create_user, delete_user, list_users, get_user, get_user_by_name, update_user,soft_delete_user
 from app.db.session import get_db
 from app.schemas.user import UserCreate, UserRead, UserUpdate, UserDelete
 from app.db.models.user import User
@@ -14,9 +14,15 @@ router = APIRouter(prefix="/users", tags=["users"])
 def create(payload:UserCreate, db:Session = Depends(get_db)):
     return create_user(db, payload)
 
+@router.get("/find", response_model= list[UserRead])
+def get_by_name(user_name:str, db:Session = Depends(get_db)):
+    return get_user_by_name(db, user_name)
+
 @router.get("/", response_model= list[UserRead], dependencies=[Depends(require_permission('users','read','any'))])
 def get_all( db:Session = Depends(get_db)):
     return list_users(db)
+
+
 
 @router.get("/me", response_model=UserRead, dependencies=[Depends(require_permission('users','read','own'))])
 def get_current_one(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):

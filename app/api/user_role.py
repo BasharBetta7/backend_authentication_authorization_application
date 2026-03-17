@@ -16,7 +16,8 @@ def create(payload: UserRoleCreate, db: Session = Depends(get_db), current_user 
 
 
 @router.get("/", response_model=list[UserRoleRead],
-            dependencies=[Depends(require_permission('user-roles','read','any'))])
+            # dependencies=[Depends(require_permission('user-roles','read','any'))])
+)
 def get_all(db: Session = Depends(get_db)):
     return list_user_roles(db)
 

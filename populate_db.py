@@ -1,417 +1,276 @@
 #!/usr/bin/env python3
 """
-Database Population Script for Authentication Backend
+Populate database with RBAC roles, permissions, and role-permission mappings.
 
-This script populates the database with initial test data including:
-- 3 users (bashar, ahmad, ali) with random emails and passwords matching their names
-- 2 roles (user, admin)
-- 3 actions (read, add, delete)
-- 1 resource (users)
-- 2 permissions (users:read:own, users:read:any)
-- User-role assignments (bashar -> admin, ahmad -> user)
-
-Usage:
-    python populate_db.py
-
-Requirements:
-    - All dependencies from requirements.txt must be installed
-    - Database must be created and migrated (run alembic upgrade head)
-    - Virtual environment should be activated
-
-Author: Database Population Script
-Date: March 15, 2026
+This script follows the README role matrix with one requested change:
+- do NOT create `guest`
+- create only: `user`, `admin`, `superuser`
 """
+
+from __future__ import annotations
 
 import random
 import string
-from app.db.session import SessionLocal
-from app.db.models import (
-    User, Role, Action, Resource, Permission,
-    UserRole, RolePermission
-)
+from collections.abc import Iterable
+
 from app.core.security import hash_password
+from app.db.models import Action, Permission, Resource, Role, RolePermission, User, UserRole
+from app.db.session import SessionLocal
+
+
+# Core RBAC constants
+ROLE_DEFINITIONS = [
+    ("user", "Regular authenticated user"),
+    ("admin", "Administrative user"),
+    ("superuser", "System superuser"),
+]
+
+ACTIONS = ["read", "add", "update", "delete"]
+
+USER_PERMISSIONS = {
+    ("users", "read", "own"),
+    ("users", "update", "own"),
+    ("users", "delete", "own"),
+    ("events", "read", "any"),
+    ("events", "update", "own"),
+    ("events", "add", "own"),
+    ("events", "delete", "own"),
+}
+
+ADMIN_EXTRA_PERMISSIONS = {
+    ("users", "read", "any"),
+    ("events", "update", "any"),
+    ("events", "delete", "any"),
+    ("admins", "add", "any"),
+    ("admins", "delete", "own"),
+}
+
+SUPERUSER_EXTRA_PERMISSIONS = {
+    ("admins", "delete", "any"),
+    ("roles", "read", "any"),
+    ("roles", "add", "any"),
+    ("roles", "update", "any"),
+    ("roles", "delete", "any"),
+    ("role-permissions", "read", "any"),
+    ("role-permissions", "add", "any"),
+    ("role-permissions", "update", "any"),
+    ("role-permissions", "delete", "any"),
+}
+
+ROLE_PERMISSION_MATRIX = {
+    "user": set(USER_PERMISSIONS),
+    "admin": set(USER_PERMISSIONS) | set(ADMIN_EXTRA_PERMISSIONS),
+    "superuser": set(USER_PERMISSIONS) | set(ADMIN_EXTRA_PERMISSIONS) | set(SUPERUSER_EXTRA_PERMISSIONS),
+}
 
 
 def generate_random_email(name: str) -> str:
-    """
-    Generate a random email address for a user.
-
-    Args:
-        name: The user's name to base the email on
-
-    Returns:
-        A random email address in format: name{random}@example.com
-    """
-    random_suffix = ''.join(random.choices(string.digits, k=3))
-    return f"{name}{random_suffix}@example.com"
+    random_suffix = "".join(random.choices(string.digits, k=3))
+    return f"{name}@example.com"
 
 
-def create_users(db_session):
-    """
-    Create three users: bashar, ahmad, and ali.
+def get_or_create_user(db, first_name: str, last_name: str, password_plain: str) -> User:
+    existing = db.query(User).filter(User.first_name == first_name, User.last_name == last_name).first()
+    if existing:
+        return existing
 
-    Each user gets:
-    - First name and last name set to their username
-    - Random email address
-    - Password hashed from their name
-    - Active status
-
-    Args:
-        db_session: SQLAlchemy database session
-
-    Returns:
-        Dictionary mapping usernames to User objects
-    """
-    print("Creating users...")
-
-    users_data = [
-        {"name": "bashar", "first_name": "Bashar", "last_name": "User"},
-        {"name": "ahmad", "first_name": "Ahmad", "last_name": "User"},
-        {"name": "ali", "first_name": "Ali", "last_name": "User"}
-    ]
-
-    users = {}
-    for user_data in users_data:
-        # Check if user already exists
-        existing_user = db_session.query(User).filter(User.first_name == user_data["first_name"]).first()
-        if existing_user:
-            users[user_data["name"]] = existing_user
-            print(f"  ✓ User already exists: {user_data['name']} ({existing_user.email})")
-            continue
-
-        # Generate random email and hash password
-        email = generate_random_email(user_data["name"])
-        hashed_password = hash_password(user_data["name"])
-
-        # Create user object
-        user = User(
-            first_name=user_data["first_name"],
-            last_name=user_data["last_name"],
-            email=email,
-            password=hashed_password,
-            is_active=True
-        )
-
-        # Add to database
-        db_session.add(user)
-        db_session.flush()  # Get the ID without committing
-
-        users[user_data["name"]] = user
-        print(f"  ✓ Created user: {user_data['name']} ({email})")
-
-    return users
-
-
-def create_roles(db_session):
-    """
-    Create two roles: 'user' and 'admin'.
-
-    Args:
-        db_session: SQLAlchemy database session
-
-    Returns:
-        Dictionary mapping role names to Role objects
-    """
-    print("Creating roles...")
-
-    roles_data = [
-        {"name": "user", "description": "Regular user with basic permissions"},
-        {"name": "admin", "description": "Administrator with full permissions"}
-    ]
-
-    roles = {}
-    for role_data in roles_data:
-        # Check if role already exists
-        existing_role = db_session.query(Role).filter(Role.name == role_data["name"]).first()
-        if existing_role:
-            roles[role_data["name"]] = existing_role
-            print(f"  ✓ Role already exists: {role_data['name']}")
-            continue
-
-        role = Role(
-            name=role_data["name"],
-            description=role_data["description"]
-        )
-
-        db_session.add(role)
-        db_session.flush()
-
-        roles[role_data["name"]] = role
-        print(f"  ✓ Created role: {role_data['name']}")
-
-    return roles
-
-
-def create_actions(db_session):
-    """
-    Create three actions: 'read', 'add', and 'delete'.
-
-    Args:
-        db_session: SQLAlchemy database session
-
-    Returns:
-        Dictionary mapping action names to Action objects
-    """
-    print("Creating actions...")
-
-    actions_data = [
-        {"name": "read", "description": "Read/view permission"},
-        {"name": "add", "description": "Create/add permission"},
-        {"name": "delete", "description": "Delete/remove permission"}
-    ]
-
-    actions = {}
-    for action_data in actions_data:
-        # Check if action already exists
-        existing_action = db_session.query(Action).filter(Action.name == action_data["name"]).first()
-        if existing_action:
-            actions[action_data["name"]] = existing_action
-            print(f"  ✓ Action already exists: {action_data['name']}")
-            continue
-
-        action = Action(
-            name=action_data["name"],
-            description=action_data["description"]
-        )
-
-        db_session.add(action)
-        db_session.flush()
-
-        actions[action_data["name"]] = action
-        print(f"  ✓ Created action: {action_data['name']}")
-
-    return actions
-
-
-def create_resources(db_session):
-    """
-    Create one resource: 'users'.
-
-    Args:
-        db_session: SQLAlchemy database session
-
-    Returns:
-        Dictionary mapping resource names to Resource objects
-    """
-    print("Creating resources...")
-
-    resource_name = "users"
-    # Check if resource already exists
-    existing_resource = db_session.query(Resource).filter(Resource.name == resource_name).first()
-    if existing_resource:
-        resources = {resource_name: existing_resource}
-        print(f"  ✓ Resource already exists: {resource_name}")
-        return resources
-
-    resource = Resource(
-        name=resource_name,
-        description="User management resource"
+    user = User(
+        first_name=first_name,
+        last_name=last_name,
+        email=generate_random_email(first_name.lower()),
+        password=hash_password(password_plain),
+        is_active=True,
     )
-
-    db_session.add(resource)
-    db_session.flush()
-
-    resources = {resource_name: resource}
-    print(f"  ✓ Created resource: {resource_name}")
-
-    return resources
+    db.add(user)
+    db.flush()
+    return user
 
 
-def create_permissions(db_session, resources, actions):
-    """
-    Create two permissions:
-    - users:read:own (users resource + read action + own scope)
-    - users:read:any (users resource + read action + any scope)
+def get_or_create_role(db, name: str, description: str) -> Role:
+    existing = db.query(Role).filter(Role.name == name).first()
+    if existing:
+        return existing
 
-    Args:
-        db_session: SQLAlchemy database session
-        resources: Dictionary of resource objects
-        actions: Dictionary of action objects
+    role = Role(name=name, description=description)
+    db.add(role)
+    db.flush()
+    return role
 
-    Returns:
-        Dictionary mapping permission descriptions to Permission objects
-    """
-    print("Creating permissions...")
 
-    permissions_data = [
-        {
-            "resource": "users",
-            "action": "read",
-            "scope": "own",
-            "description": "users:read:own"
-        },
-        {
-            "resource": "users",
-            "action": "read",
-            "scope": "any",
-            "description": "users:read:any"
-        }
-    ]
+def get_or_create_action(db, name: str) -> Action:
+    existing = db.query(Action).filter(Action.name == name).first()
+    if existing:
+        return existing
 
-    permissions = {}
-    for perm_data in permissions_data:
-        # Check if permission already exists
-        existing_permission = db_session.query(Permission).filter(
-            Permission.resource_id == resources[perm_data["resource"]].id,
-            Permission.action_id == actions[perm_data["action"]].id,
-            Permission.scope == perm_data["scope"]
-        ).first()
+    action = Action(name=name, description=f"{name} action")
+    db.add(action)
+    db.flush()
+    return action
 
-        if existing_permission:
-            permissions[perm_data["description"]] = existing_permission
-            print(f"  ✓ Permission already exists: {perm_data['description']}")
-            continue
 
-        permission = Permission(
-            resource_id=resources[perm_data["resource"]].id,
-            action_id=actions[perm_data["action"]].id,
-            scope=perm_data["scope"]
+def get_or_create_resource(db, name: str) -> Resource:
+    existing = db.query(Resource).filter(Resource.name == name).first()
+    if existing:
+        return existing
+
+    resource = Resource(name=name, description=f"{name} resource")
+    db.add(resource)
+    db.flush()
+    return resource
+
+
+def get_or_create_permission(
+    db,
+    resource: Resource,
+    action: Action,
+    scope: str,
+) -> Permission:
+    existing = (
+        db.query(Permission)
+        .filter(
+            Permission.resource_id == resource.id,
+            Permission.action_id == action.id,
+            Permission.scope == scope,
+        )
+        .first()
+    )
+    if existing:
+        return existing
+
+    permission = Permission(resource_id=resource.id, action_id=action.id, scope=scope)
+    db.add(permission)
+    db.flush()
+    return permission
+
+
+def sync_user_roles(db, desired_pairs: set[tuple[int, int]]) -> None:
+    existing = db.query(UserRole).all()
+    existing_pairs = {(ur.user_id, ur.role_id) for ur in existing}
+
+    stale_pairs = existing_pairs - desired_pairs
+    for user_id, role_id in stale_pairs:
+        (
+            db.query(UserRole)
+            .filter(UserRole.user_id == user_id, UserRole.role_id == role_id)
+            .delete(synchronize_session=False)
         )
 
-        db_session.add(permission)
-        db_session.flush()
-
-        permissions[perm_data["description"]] = permission
-        print(f"  ✓ Created permission: {perm_data['description']}")
-
-    return permissions
+    missing_pairs = desired_pairs - existing_pairs
+    for user_id, role_id in missing_pairs:
+        db.add(UserRole(user_id=user_id, role_id=role_id))
 
 
-def assign_user_roles(db_session, users, roles):
-    """
-    Assign roles to users:
-    - bashar -> admin
-    - ahmad -> user
+def ensure_role_permission(db, role: Role, permission: Permission) -> None:
+    existing = (
+        db.query(RolePermission)
+        .filter(RolePermission.role_id == role.id, RolePermission.permission_id == permission.id)
+        .first()
+    )
+    if existing:
+        return
+    db.add(RolePermission(role_id=role.id, permission_id=permission.id))
 
-    Args:
-        db_session: SQLAlchemy database session
-        users: Dictionary of user objects
-        roles: Dictionary of role objects
-    """
-    print("Assigning user roles...")
 
-    user_role_assignments = [
-        {"user": "bashar", "role": "admin"},
-        {"user": "ahmad", "role": "user"}
-    ]
+def delete_guest_role_if_exists(db) -> None:
+    guest = db.query(Role).filter(Role.name == "guest").first()
+    if not guest:
+        return
+    db.query(UserRole).filter(UserRole.role_id == guest.id).delete(synchronize_session=False)
+    db.query(RolePermission).filter(RolePermission.role_id == guest.id).delete(synchronize_session=False)
+    db.delete(guest)
 
-    for assignment in user_role_assignments:
-        # Check if assignment already exists
-        existing_assignment = db_session.query(UserRole).filter(
-            UserRole.user_id == users[assignment["user"]].id,
-            UserRole.role_id == roles[assignment["role"]].id
-        ).first()
 
-        if existing_assignment:
-            print(f"  ✓ User role assignment already exists: {assignment['user']} -> {assignment['role']}")
-            continue
+def sync_role_permissions(db, role: Role, desired_permission_ids: set[int]) -> None:
+    existing = db.query(RolePermission).filter(RolePermission.role_id == role.id).all()
+    existing_ids = {rp.permission_id for rp in existing}
 
-        user_role = UserRole(
-            user_id=users[assignment["user"]].id,
-            role_id=roles[assignment["role"]].id
+    # Remove stale permissions that are no longer in the matrix.
+    stale_ids = existing_ids - desired_permission_ids
+    if stale_ids:
+        (
+            db.query(RolePermission)
+            .filter(RolePermission.role_id == role.id, RolePermission.permission_id.in_(stale_ids))
+            .delete(synchronize_session=False)
         )
 
-        db_session.add(user_role)
-        print(f"  ✓ Assigned {assignment['user']} -> {assignment['role']}")
+    # Add missing permissions from the matrix.
+    missing_ids = desired_permission_ids - existing_ids
+    for permission_id in missing_ids:
+        db.add(RolePermission(role_id=role.id, permission_id=permission_id))
 
 
-def assign_role_permissions(db_session, roles, permissions):
-    """
-    Assign permissions to roles:
-    - admin role gets both permissions (users:read:own and users:read:any)
-    - user role gets only users:read:own
-
-    Args:
-        db_session: SQLAlchemy database session
-        roles: Dictionary of role objects
-        permissions: Dictionary of permission objects
-    """
-    print("Assigning role permissions...")
-
-    role_permission_assignments = [
-        {"role": "admin", "permissions": ["users:read:own", "users:read:any"]},
-        {"role": "user", "permissions": ["users:read:own"]}
-    ]
-
-    for assignment in role_permission_assignments:
-        for perm_name in assignment["permissions"]:
-            # Check if assignment already exists
-            existing_assignment = db_session.query(RolePermission).filter(
-                RolePermission.role_id == roles[assignment["role"]].id,
-                RolePermission.permission_id == permissions[perm_name].id
-            ).first()
-
-            if existing_assignment:
-                print(f"  ✓ Role permission assignment already exists: {assignment['role']} -> {perm_name}")
-                continue
-
-            role_permission = RolePermission(
-                role_id=roles[assignment["role"]].id,
-                permission_id=permissions[perm_name].id
-            )
-
-            db_session.add(role_permission)
-            print(f"  ✓ Assigned {assignment['role']} -> {perm_name}")
+def permission_key(permission_triplet: tuple[str, str, str]) -> str:
+    resource, action, scope = permission_triplet
+    return f"{resource}:{action}:{scope}"
 
 
-def main():
-    """
-    Main function to populate the database with all initial data.
+def all_permission_triplets(matrix_values: Iterable[set[tuple[str, str, str]]]) -> set[tuple[str, str, str]]:
+    triplets: set[tuple[str, str, str]] = set()
+    for role_perms in matrix_values:
+        triplets |= role_perms
+    return triplets
 
-    This function orchestrates the creation of all database entities
-    in the correct order to maintain referential integrity.
-    """
-    print("🚀 Starting database population...")
-    print("=" * 50)
 
-    # Create database session
+def main() -> None:
+    print("Starting RBAC database population")
     db = SessionLocal()
-
     try:
-        # Create base entities first (no dependencies)
-        users = create_users(db)
-        roles = create_roles(db)
-        actions = create_actions(db)
-        resources = create_resources(db)
+        delete_guest_role_if_exists(db)
 
-        print()
+        # 1) Users for quick local testing
+        users = {
+            "ali": get_or_create_user(db, "Ali", "User", "ali"),
+            "ahmad": get_or_create_user(db, "Ahmad", "User", "ahmad"),
+            "bashar": get_or_create_user(db, "Bashar", "User", "bashar"),
+        }
 
-        # Create permissions (depends on resources and actions)
-        permissions = create_permissions(db, resources, actions)
+        # 2) Roles (no guest)
+        roles = {name: get_or_create_role(db, name, description) for name, description in ROLE_DEFINITIONS}
 
-        print()
+        # 3) Actions
+        actions = {name: get_or_create_action(db, name) for name in ACTIONS}
 
-        # Create relationships
-        assign_user_roles(db, users, roles)
-        assign_role_permissions(db, roles, permissions)
+        # 4) Resources from permission matrix
+        all_triplets = all_permission_triplets(ROLE_PERMISSION_MATRIX.values())
+        resource_names = sorted({resource for resource, _, _ in all_triplets})
+        resources = {name: get_or_create_resource(db, name) for name in resource_names}
 
-        print()
-        print("=" * 50)
-        print("✅ Database population completed successfully!")
+        # 5) Permissions
+        permissions: dict[str, Permission] = {}
+        for resource_name, action_name, scope in sorted(all_triplets):
+            permission = get_or_create_permission(
+                db,
+                resource=resources[resource_name],
+                action=actions[action_name],
+                scope=scope,
+            )
+            permissions[f"{resource_name}:{action_name}:{scope}"] = permission
 
-        # Display summary
-        print("\n📊 Summary:")
-        print(f"   Users created: {len(users)}")
-        print(f"   Roles created: {len(roles)}")
-        print(f"   Actions created: {len(actions)}")
-        print(f"   Resources created: {len(resources)}")
-        print(f"   Permissions created: {len(permissions)}")
+        # 6) Sync user-role assignments to exactly three mappings
+        desired_user_role_pairs = {
+            (users["ali"].id, roles["user"].id),
+            (users["ahmad"].id, roles["admin"].id),
+            (users["bashar"].id, roles["superuser"].id),
+        }
+        sync_user_roles(db, desired_user_role_pairs)
 
-        print("\n👥 User Details:")
-        for name, user in users.items():
-            print(f"   {name}: {user.email} (password: {name})")
+        # 7) Role-permission assignments from README matrix
+        for role_name, triplets in ROLE_PERMISSION_MATRIX.items():
+            role = roles[role_name]
+            desired_permission_ids = {permissions[permission_key(triplet)].id for triplet in triplets}
+            sync_role_permissions(db, role, desired_permission_ids)
 
-        print("\n🔐 Role Assignments:")
-        print("   bashar -> admin")
-        print("   ahmad -> user")
-        print("   ali -> (no role assigned)")
-
-        # Commit all changes
         db.commit()
-        print("\n💾 All changes committed to database.")
 
-    except Exception as e:
-        print(f"\n❌ Error during database population: {e}")
+        print("RBAC population complete")
+        print(f"Roles: {', '.join(sorted(roles.keys()))}")
+        print(f"Resources: {', '.join(resource_names)}")
+        print(f"Permissions created/ensured: {len(all_triplets)}")
+        print("Role permission counts:")
+        for role_name in ["user", "admin", "superuser"]:
+            print(f"  {role_name}: {len(ROLE_PERMISSION_MATRIX[role_name])}")
+
+    except Exception:
         db.rollback()
         raise
     finally:

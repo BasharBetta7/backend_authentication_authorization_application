@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.user import UserCreate
-
+from fastapi.security import OAuth2PasswordRequestForm
 
 class SignupRequest(UserCreate):
     confirm_password: str = Field(min_length=8, max_length=128)

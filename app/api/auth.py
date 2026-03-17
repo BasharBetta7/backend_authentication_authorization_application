@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import datetime
 
@@ -13,7 +14,8 @@ from app.db.session import get_db
 from app.schemas.auth import RefreshTokenRequest, SignupRequest, TokenResponse
 from app.schemas.user import UserLogin, UserRead
 from app.db.models.refresh_token import RefreshToken
-
+from app.core.auth import get_current_user
+from app.db.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -26,8 +28,8 @@ def signup(payload: SignupRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenResponse)
-def login(payload: UserLogin, db: Session = Depends(get_db)):
-    user = get_user_by_email(db, payload.email)
+def login(payload: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    user = get_user_by_email(db, payload.username)
     if not user or not verify_password(payload.password, user.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     if not user.is_active:
@@ -42,6 +44,21 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
     
     return TokenResponse(access_token=access_token, refresh_token=refresh_token)
 
+@router.post("/logout", status_code=status.HTTP_200_OK, dependencies=[Depends(get_current_user)])
+def logout(user: User = Depends(get_current_user), db:Session = Depends(get_db)):
+    #revoke refresh token
+    stored_token = (
+        db.query(RefreshToken)
+        .filter(
+            RefreshToken.user_id == user.id
+        ).first()
+    )
+    if not stored_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Refresh token revoked")
+    stored_token.is_revoked = True
+    db.commit()
+    db.refresh(stored_token)
+    return {"detail" : "Refresh token revoked"}
 
 @router.post("/refresh", response_model=TokenResponse)
 def refresh(payload: RefreshTokenRequest, db: Session = Depends(get_db)):

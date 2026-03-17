@@ -107,6 +107,7 @@ Below we explain the permission of each role:
     - admins:delete:any
     - roles:read|add|update|delete:any
     - role-permissions:read|add|update|delete:any
+    - permissions:read|add|update|delete:any
 
 At the launch, we will have the following roles: guest (default), user, admin, superuser. 
 Also, we will have the following permissions: users:read|add|update|delete:own|any, events:read|add|update|delete:own|any, roles:read|add|update|delete:own|any, permission:raud:oa, user_roles:raud:oa, role_permissions:raud:oa.

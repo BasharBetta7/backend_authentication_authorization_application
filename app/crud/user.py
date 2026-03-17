@@ -42,5 +42,6 @@ def delete_user(db:Session, user:User) -> None:
 
 def soft_delete_user(db:Session, user:User) -> User:
     user.is_active = False
+    db.commit()
     db.refresh(user)
     return user

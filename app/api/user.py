@@ -18,7 +18,9 @@ def create(payload:UserCreate, db:Session = Depends(get_db)):
 def get_by_name(user_name:str, db:Session = Depends(get_db)):
     return get_user_by_name(db, user_name)
 
-@router.get("/", response_model= list[UserRead], dependencies=[Depends(require_permission('users','read','any'))])
+@router.get("/", response_model= list[UserRead], 
+            # dependencies=[Depends(require_permission('users','read','any'))]
+            )
 def get_all( db:Session = Depends(get_db)):
     return list_users(db)
 
@@ -38,8 +40,8 @@ def get_one(user_id:int, current_user: User = Depends(require_permission('users'
 
 
 @router.patch("/me", response_model=UserRead, dependencies=[Depends(require_permission('users','update','own'))])
-def upate(user_id:int, payload:UserUpdate, current_user = Depends(get_current_user), db:Session = Depends(get_db)):
-    user = get_user(db, user_id)
+def upate( payload:UserUpdate, current_user = Depends(get_current_user), db:Session = Depends(get_db)):
+    user = get_user(db, current_user.id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not Found")
     return update_user(db, user, payload)
@@ -65,7 +67,6 @@ def delete_one(user_id: int, db:Session = Depends(get_db)):
 def delete_me(current_user: User = Depends(get_current_user),
               db:Session = Depends(get_db),
               _:None = Depends(require_permission("users","delete","own"))):
-    print(current_user)
     soft_delete_user(db, current_user)
 
 

@@ -35,6 +35,7 @@ USER_PERMISSIONS = {
     ("events", "update", "own"),
     ("events", "add", "own"),
     ("events", "delete", "own"),
+    ("user-roles", "read", "own"),
 }
 
 ADMIN_EXTRA_PERMISSIONS = {
@@ -55,6 +56,10 @@ SUPERUSER_EXTRA_PERMISSIONS = {
     ("role-permissions", "add", "any"),
     ("role-permissions", "update", "any"),
     ("role-permissions", "delete", "any"),
+    ("permissions", "add", "any"),
+    ("permissions", "read", "any"),
+    ("permissions", "update", "any"),
+    ("permissions", "delete", "any"),
 }
 
 ROLE_PERMISSION_MATRIX = {

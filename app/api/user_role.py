@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.crud.user_role import create_user_role, delete_user_role, get_user_role, list_user_roles, update_user_role
+from app.crud.user_role import create_user_role, delete_user_role, get_user_role, get_user_role_by_user, list_user_roles, update_user_role
 from app.db.session import get_db
 from app.schemas.user_role import UserRoleCreate, UserRoleRead, UserRoleUpdate
 from app.core.auth import require_permission, get_current_user
+from app.db.models.user import User
 
 router = APIRouter(prefix="/user-roles", tags=["user_roles"])
 
@@ -30,6 +31,15 @@ def get_one(user_id: int, role_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User role not found")
     return user_role
 
+
+@router.get("/me", response_model=list[UserRoleRead],
+            dependencies=[Depends(require_permission('user-roles','read','own'))])
+def get_user_roles(current_user = Depends(get_current_user), db:Session = Depends(get_db)):
+    print(current_user)
+    user_role = get_user_role_by_user(db, current_user.id)
+    if not user_role:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User role not found")
+    return user_role
 
 @router.patch("/{user_id}/{role_id}", response_model=UserRoleRead,
               dependencies=[Depends(require_permission('user-roles','update','any'))])

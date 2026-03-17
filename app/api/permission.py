@@ -9,17 +9,17 @@ from app.core.auth import require_permission, get_current_user
 router = APIRouter(prefix="/permissions", tags=["permissions"])
 
 @router.post("/", response_model=PermissionRead, status_code=status.HTTP_201_CREATED,
-             dependencies=[Depends(require_permission('permission','add','any'))])
+             dependencies=[Depends(require_permission('permissions','add','any'))])
 def create(payload:PermissionCreateByName, db:Session = Depends(get_db)):
     return create_permission_by_name(db, payload)
 
 @router.get("/", response_model=list[PermissionRead],
-            dependencies=[Depends(require_permission('permission','read','any'))])
+            dependencies=[Depends(require_permission('permissions','read','any'))])
 def get_all(db:Session = Depends(get_db)):
     return list_permissions(db)
 
 @router.get("/{permission_id}", response_model=PermissionRead,
-            dependencies=[Depends(require_permission('permission','read','any'))])
+            dependencies=[Depends(require_permission('permissions','read','any'))])
 def get_one(permission_id:int, db:Session = Depends(get_db)):
     permission = get_permission(db, permission_id)
     if not permission:
@@ -27,7 +27,7 @@ def get_one(permission_id:int, db:Session = Depends(get_db)):
     return permission
 
 @router.patch("/{permission_id}", response_model=PermissionRead,
-              dependencies=[Depends(require_permission('permission','update','any'))])
+              dependencies=[Depends(require_permission('permissions','update','any'))])
 def update_one(permission_id:int, payload:PermissionUpdate, db:Session = Depends(get_db)):
     permission = get_permission(db, permission_id)
     if not permission:
@@ -35,7 +35,7 @@ def update_one(permission_id:int, payload:PermissionUpdate, db:Session = Depends
     return update_permission(db, permission, payload)
 
 @router.delete("/{permission_id}", status_code=status.HTTP_204_NO_CONTENT,
-               dependencies=[Depends(require_permission('permission','delete','any'))])
+               dependencies=[Depends(require_permission('permissions','delete','any'))])
 def delete_one(permission_id: int, db:Session = Depends(get_db)):
     permission = get_permission(db, permission_id)
     if not permission:

@@ -9,17 +9,20 @@ from app.core.auth import require_permission, get_current_user
 router = APIRouter(prefix="/user-roles", tags=["user_roles"])
 
 
-@router.post("/", response_model=UserRoleRead, status_code=status.HTTP_201_CREATED,)
+@router.post("/", response_model=UserRoleRead, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_permission('user-roles','add','any'))])
 def create(payload: UserRoleCreate, db: Session = Depends(get_db), current_user = Depends(require_permission('user-roles','add','any'))):
     return create_user_role(db, payload)
 
 
-@router.get("/", response_model=list[UserRoleRead])
+@router.get("/", response_model=list[UserRoleRead],
+            dependencies=[Depends(require_permission('user-roles','read','any'))])
 def get_all(db: Session = Depends(get_db)):
     return list_user_roles(db)
 
 
-@router.get("/{user_id}/{role_id}", response_model=UserRoleRead)
+@router.get("/{user_id}/{role_id}", response_model=UserRoleRead,
+            dependencies=[Depends(require_permission('user-roles','read','any'))])
 def get_one(user_id: int, role_id: int, db: Session = Depends(get_db)):
     user_role = get_user_role(db, user_id, role_id)
     if not user_role:
@@ -27,7 +30,8 @@ def get_one(user_id: int, role_id: int, db: Session = Depends(get_db)):
     return user_role
 
 
-@router.patch("/{user_id}/{role_id}", response_model=UserRoleRead)
+@router.patch("/{user_id}/{role_id}", response_model=UserRoleRead,
+              dependencies=[Depends(require_permission('user-roles','update','any'))])
 def update_one(user_id: int, role_id: int, payload: UserRoleUpdate, db: Session = Depends(get_db)):
     user_role = get_user_role(db, user_id, role_id)
     if not user_role:
@@ -35,7 +39,8 @@ def update_one(user_id: int, role_id: int, payload: UserRoleUpdate, db: Session 
     return update_user_role(db, user_role, payload)
 
 
-@router.delete("/{user_id}/{role_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{user_id}/{role_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(require_permission('user-roles','delete','any'))])
 def delete_one(user_id: int, role_id: int, db: Session = Depends(get_db)):
     user_role = get_user_role(db, user_id, role_id)
     if not user_role:

@@ -4,21 +4,25 @@ from sqlalchemy.orm import Session
 from app.crud.action import create_action, delete_action, get_action, list_actions, update_action
 from app.db.session import get_db
 from app.schemas.action import ActionCreate, ActionRead, ActionUpdate
+from app.core.auth import get_current_user, require_permission
 
 router = APIRouter(prefix="/actions", tags=["actions"])
 
 
-@router.post("/", response_model=ActionRead, status_code=status.HTTP_201_CREATED)
+@router.post("/", response_model=ActionRead, status_code=status.HTTP_201_CREATED,
+             dependencies=[Depends(require_permission('actions','add','any'))])
 def create(payload: ActionCreate, db: Session = Depends(get_db)):
     return create_action(db, payload)
 
 
-@router.get("/", response_model=list[ActionRead])
+@router.get("/", response_model=list[ActionRead],
+            dependencies=[Depends(require_permission('actions','read','any'))])
 def get_all(db: Session = Depends(get_db)):
     return list_actions(db)
 
 
-@router.get("/{action_id}", response_model=ActionRead)
+@router.get("/{action_id}", response_model=ActionRead,
+            dependencies=[Depends(require_permission('actions','read','any'))])
 def get_one(action_id: int, db: Session = Depends(get_db)):
     action = get_action(db, action_id)
     if not action:
@@ -26,7 +30,8 @@ def get_one(action_id: int, db: Session = Depends(get_db)):
     return action
 
 
-@router.patch("/{action_id}", response_model=ActionRead)
+@router.patch("/{action_id}", response_model=ActionRead,
+              dependencies=[Depends(require_permission('actions','update','any'))])
 def update_one(action_id: int, payload: ActionUpdate, db: Session = Depends(get_db)):
     action = get_action(db, action_id)
     if not action:
@@ -34,7 +39,8 @@ def update_one(action_id: int, payload: ActionUpdate, db: Session = Depends(get_
     return update_action(db, action, payload)
 
 
-@router.delete("/{action_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{action_id}", status_code=status.HTTP_204_NO_CONTENT,
+               dependencies=[Depends(require_permission('actions','delete','any'))])
 def delete_one(action_id: int, db: Session = Depends(get_db)):
     action = get_action(db, action_id)
     if not action:

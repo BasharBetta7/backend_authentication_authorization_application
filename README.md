@@ -1,129 +1,129 @@
 # Authentication & Authorization Backend
 
 ## Description
-This project is a FastAPI+SQLalchemy backend that implements:
-- JWT-based authentication (`access token` + `refresh token`)
-- RBAC authorization using `roles`, `permissions`, `user_roles`, and `role_permissions`
-- CRUD APIs for users and authorization objects (roles, resources, actions, permissions)
-- Mock APIs (`roles`,`permissions`, `events`) to demonstrate permission checks
+Этот проект представляет собой backend на FastAPI, который реализует:
+- Authentication на основе JWT (`access token` + `refresh token`)
+- Authorization по модели RBAC с использованием `roles`, `permissions`, `user_roles` и `role_permissions`
+- CRUD API для пользователей и объектов Authorization (roles, resources, actions, permissions)
+- Mock API для демонстрации проверок permissions
 
-Permissions are represented as:
+Permissions задаются в формате:
 `resource:action:scope`
 
-Example:
+Пример:
 `users:read:own`
 
 
 ## Tables
 - `users`
-  - Stores account identity and status.
-  - Key fields: `id`, `first_name`, `last_name`, `email` (unique), `password`, `is_active`.
+  - Хранит учетные данные пользователя и статус.
+  - Основные поля: `id`, `first_name`, `last_name`, `email` (unique), `password`, `is_active`.
 
 - `roles`
-  - Stores role definitions.
-  - Key fields: `id`, `name` (unique), `description`.
+  - Хранит определения ролей.
+  - Основные поля: `id`, `name` (unique), `description`.
 
 - `user_roles`
-  - Many-to-many mapping between users and roles.
-  - Key fields: `user_id` (FK -> `users.id`), `role_id` (FK -> `roles.id`).
-  - Composite uniqueness by `(user_id, role_id)`.
+  - Связь many-to-many между users и roles.
+  - Основные поля: `user_id` (FK -> `users.id`), `role_id` (FK -> `roles.id`).
+  - Composite uniqueness по `(user_id, role_id)`.
 
 - `resources`
-  - Stores protected resource names used in permission triplets.
-  - Key fields: `id`, `name` (unique), `description`.
+  - Хранит названия защищаемых resources для permission triplets.
+  - Основные поля: `id`, `name` (unique), `description`.
 
 - `actions`
-  - Stores allowed operations used in permission triplets.
-  - Key fields: `id`, `name` (unique), `description`.
+  - Хранит допустимые actions для permission triplets.
+  - Основные поля: `id`, `name` (unique), `description`.
 
 - `permissions`
-  - Stores `resource + action + scope` combinations.
-  - Key fields: `id`, `resource_id` (FK -> `resources.id`), `action_id` (FK -> `actions.id`), `scope` (`own`/`any`).
-  - Unique constraint on `(resource_id, action_id, scope)`.
+  - Хранит комбинации `resource + action + scope`.
+  - Основные поля: `id`, `resource_id` (FK -> `resources.id`), `action_id` (FK -> `actions.id`), `scope` (`own`/`any`).
+  - Unique constraint на `(resource_id, action_id, scope)`.
 
 - `role_permissions`
-  - Many-to-many mapping between roles and permissions.
-  - Key fields: `id`, `role_id` (FK -> `roles.id`), `permission_id` (FK -> `permissions.id`).
-  - Unique constraint on `(role_id, permission_id)`.
+  - Связь many-to-many между roles и permissions.
+  - Основные поля: `id`, `role_id` (FK -> `roles.id`), `permission_id` (FK -> `permissions.id`).
+  - Unique constraint на `(role_id, permission_id)`.
 
 - `refresh_tokens`
-  - Stores refresh token sessions for rotation/revocation.
-  - Key fields: `id`, `user_id`, `token`, `expires_at`, `is_revoked`, `created_at`, `revoked_at`.
+  - Хранит refresh token sessions для rotation/revocation.
+  - Основные поля: `id`, `user_id`, `token`, `expires_at`, `is_revoked`, `created_at`, `revoked_at`.
 
-### `is_active` and Soft Delete
-- `is_active` is a status flag on `users`.
-- `is_active=true`: user can authenticate and pass authorization checks.
-- `is_active=false`: user is treated as inactive and blocked from protected access.
+### `is_active` и Soft Delete
+- `is_active` — это статусный флаг в таблице `users`.
+- `is_active=true`: пользователь может проходить Authentication и Authorization checks.
+- `is_active=false`: пользователь считается неактивным и блокируется при доступе к protected endpoints.
 
-Soft delete is implemented by setting `users.is_active = false` instead of removing the row.
+`Soft delete` реализован через установку `users.is_active = false`, без физического удаления строки.
 
-Soft-delete endpoints:
+Endpoints для soft delete:
 - `DELETE /users/me`
-- `DELETE /users/{user_id}` (permission required)
+- `DELETE /users/{user_id}` (требуются соответствующие permissions)
 
-Hard delete endpoint:
-- `DELETE /users/hard/{user_id}` (physically removes row)
+Endpoint для hard delete:
+- `DELETE /users/hard/{user_id}` (физически удаляет строку из БД)
 
 
 ## Authentication
 Authentication flow:
-1. User signs up using `POST /auth/signup`
-2. User logs in using `POST /auth/login` and receives:
-   - `access_token` (used in `Authorization: Bearer <token>`)
+1. Пользователь регистрируется через `POST /auth/signup`
+2. Пользователь выполняет login через `POST /auth/login` и получает:
+   - `access_token` (используется в `Authorization: Bearer <token>`)
    - `refresh_token`
-3. User can log out using `POST /auth/logout` (requires access token). This revokes a stored refresh token for the user.
-4. When access token expires, client calls `POST /auth/refresh` to get a new token pair.
+3. Пользователь может выполнить logout через `POST /auth/logout` (требуется access token). Это revokes одну сохраненную refresh token запись пользователя.
+4. Когда `access token` истекает, клиент вызывает `POST /auth/refresh`, чтобы получить новую пару токенов.
 
-Requests to protected endpoints must include:
+Для protected endpoints необходимо передавать:
 `Authorization: Bearer <access_token>`
 
 ### Login Request Format (`OAuth2PasswordRequestForm`)
-`/auth/login` expects `application/x-www-form-urlencoded` fields:
+`/auth/login` ожидает `application/x-www-form-urlencoded` поля:
 - `username` (email)
 - `password`
 
-Example:
+Пример:
 ```bash
 curl -X POST http://127.0.0.1:8000/auth/login \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "username=user@example.com&password=your_password"
 ```
 
-### How Login Works
-1. Server finds user by email (`username` field)
-2. Password hash is verified
-3. User must be active (`is_active=true`)
-4. Access token and refresh token are issued
-5. Refresh token is stored in `refresh_tokens`
+### Как работает Login
+1. Сервер находит пользователя по email (из поля `username`)
+2. Проверяет `password hash`
+3. Пользователь должен быть активным (`is_active=true`)
+4. Выдаются `access token` и `refresh token`
+5. `refresh token` сохраняется в таблице `refresh_tokens`
 
-### How Logout Works
-1. Client calls `POST /auth/logout` with bearer access token
-2. Server finds a refresh token row for that user
-3. Server marks that row as `is_revoked=true`
-4. Revoked refresh token cannot be used in `POST /auth/refresh`
+### Как работает Logout
+1. Клиент вызывает `POST /auth/logout` с bearer access token
+2. Сервер находит запись refresh token для пользователя
+3. Сервер помечает эту запись как `is_revoked=true`
+4. Revoked refresh token больше нельзя использовать в `POST /auth/refresh`
 
-Note: Access tokens are stateless JWTs, so an already-issued access token remains valid until it expires.
+Примечание: `access token` является stateless JWT, поэтому уже выданный access token остается валидным до истечения срока действия.
 
 
 ## Authorization
-Authorization is enforced per endpoint using `require_permission(resource, action, scope)`.
+Authorization применяется на уровне endpoint через `require_permission(resource, action, scope)`.
 
-At runtime:
-1. Token is validated
-2. Current user is loaded
-3. User permissions are resolved through:
+Во время выполнения:
+1. Валидируется token
+2. Загружается current user
+3. Permissions пользователя вычисляются по цепочке:
    - `users -> user_roles -> roles -> role_permissions -> permissions`
-4. If permission exists, request is allowed
-5. If not:
-   - `401` for missing/invalid token
-   - `403` for insufficient permissions
+4. Если нужная permission найдена — доступ разрешается
+5. Если нет:
+   - `401` для missing/invalid token
+   - `403` для insufficient permissions
 
-Current seeded roles:
+Текущие seeded roles:
 - `user`
 - `admin`
 - `superuser`
 
-Role-permission mappings are populated by `populate_db.py`.
+Role-permission mappings заполняются скриптом `populate_db.py`.
 
 ### Current Roles and Permissions
 - `user`
@@ -136,7 +136,7 @@ Role-permission mappings are populated by `populate_db.py`.
   - `events:delete:own`
 
 - `admin`
-  - Everything in `user`, plus:
+  - Все permissions из `user`, плюс:
   - `users:read:any`
   - `events:update:any`
   - `events:delete:any`
@@ -144,7 +144,7 @@ Role-permission mappings are populated by `populate_db.py`.
   - `admins:delete:own`
 
 - `superuser`
-  - Everything in `admin`, plus:
+  - Все permissions из `admin`, плюс:
   - `admins:delete:any`
   - `roles:read:any`
   - `roles:add:any`
@@ -157,45 +157,44 @@ Role-permission mappings are populated by `populate_db.py`.
 
 
 ## How to install
-1. Clone and enter the project
+1. Клонируйте репозиторий и перейдите в проект
 ```bash
 git clone <your-repo-url>
 cd backend_authentication_authorization_application
 ```
 
-2. Create and activate virtual environment
+2. Создайте и активируйте virtual environment
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 ```
 
-3. Install dependencies
+3. Установите зависимости
 ```bash
 .venv/bin/pip install -r requirements.txt
 ```
 
-4. Run database migrations
+4. Примените migrations
 ```bash
 alembic upgrade head
 ```
- 
 
-5. Populate seed data (roles, permissions, role-permissions, test users)
+5. Заполните БД seed-данными (roles, permissions, role-permissions, test users)
 ```bash
 python populate_db.py
 ```
-this will populate the database with three users, and provide their credentials (email, password).
+Скрипт заполнит БД тестовыми пользователями и их учетными данными (email, password).
 
-6. Start the server
+6. Запустите сервер
 ```bash
 uvicorn app.main:app --reload
 ```
 
-7. Run tests to ensure the application works fine
+7. Запустите тесты
 ```bash
 pytest -q tests/
 ```
 
-8. Open Swagger UI
+8. Откройте Swagger UI
 `http://127.0.0.1:8000/docs`
-to get interactive web page to test the endpoints, you can authorize 
+Там можно интерактивно тестировать endpoints и выполнять authorize.

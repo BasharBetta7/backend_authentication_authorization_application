@@ -224,9 +224,9 @@ def main() -> None:
 
         # 1) Users for quick local testing
         users = {
-            "ali": get_or_create_user(db, "Ali", "User", "ali"),
-            "ahmad": get_or_create_user(db, "Ahmad", "User", "ahmad"),
-            "bashar": get_or_create_user(db, "Bashar", "User", "bashar"),
+            "user_1": get_or_create_user(db, "User1", "User", "user1"),
+            "user_2": get_or_create_user(db, "User2", "User", "user2"),
+            "user_3": get_or_create_user(db, "User3", "User", "user3"),
         }
 
         # 2) Roles (no guest)
@@ -253,9 +253,9 @@ def main() -> None:
 
         # 6) Sync user-role assignments to exactly three mappings
         desired_user_role_pairs = {
-            (users["ali"].id, roles["user"].id),
-            (users["ahmad"].id, roles["admin"].id),
-            (users["bashar"].id, roles["superuser"].id),
+            (users["user_1"].id, roles["user"].id),
+            (users["user_2"].id, roles["admin"].id),
+            (users["user_3"].id, roles["superuser"].id),
         }
         sync_user_roles(db, desired_user_role_pairs)
 
@@ -266,6 +266,11 @@ def main() -> None:
             sync_role_permissions(db, role, desired_permission_ids)
 
         db.commit()
+        print("USERS CREDENTIALS: ")
+        for k,v in users.items():
+            print(f"{k} : email:{v.email}, password: {(v.first_name.lower())}")
+        print("*"*100)
+
 
         print("RBAC population complete")
         print(f"Roles: {', '.join(sorted(roles.keys()))}")

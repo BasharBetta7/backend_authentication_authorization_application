@@ -62,10 +62,10 @@ def _create_privileged_actor() -> tuple[dict, int]:
         ("roles", "read", "any"),
         ("roles", "update", "any"),
         ("roles", "delete", "any"),
-        ("permission", "add", "any"),
-        ("permission", "read", "any"),
-        ("permission", "update", "any"),
-        ("permission", "delete", "any"),
+        ("permissions", "add", "any"),
+        ("permissions", "read", "any"),
+        ("permissions", "update", "any"),
+        ("permissions", "delete", "any"),
         ("resources", "add", "any"),
         ("resources", "read", "any"),
         ("resources", "udpate", "any"),
@@ -82,10 +82,10 @@ def _create_privileged_actor() -> tuple[dict, int]:
         ("user-roles", "read", "any"),
         ("user-roles", "update", "any"),
         ("user-roles", "delete", "any"),
-        ("permission-roles", "add", "any"),
-        ("permission-roles", "read", "any"),
-        ("permission-roles", "update", "any"),
-        ("permission-roles", "delete", "any"),
+        ("role-permissions", "add", "any"),
+        ("role-permissions", "read", "any"),
+        ("role-permissions", "update", "any"),
+        ("role-permissions", "delete", "any"),
     }
 
     for resource_name, action_name, scope in required_permissions:
@@ -109,7 +109,7 @@ def _create_privileged_actor() -> tuple[dict, int]:
     actor_id = actor.id
     db.close()
 
-    login = client.post("/auth/login", json={"email": actor_email, "password": plain_password})
+    login = client.post("/auth/login", data={"username": actor_email, "password": plain_password})
     assert login.status_code == 200
     token = login.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}, actor_id
@@ -140,7 +140,7 @@ def _create_actor_with_permissions(permission_triplets: set[tuple[str, str, str]
     actor_email = actor.email
     db.close()
 
-    login = client.post("/auth/login", json={"email": actor_email, "password": plain_password})
+    login = client.post("/auth/login", data={"username": actor_email, "password": plain_password})
     assert login.status_code == 200
     return {"Authorization": f"Bearer {login.json()['access_token']}"}
 
@@ -164,7 +164,7 @@ def test_health_and_auth_endpoints():
     )
     assert signup.status_code == 201
 
-    login = client.post("/auth/login", json={"email": signup_email, "password": signup_password})
+    login = client.post("/auth/login", data={"username": signup_email, "password": signup_password})
     assert login.status_code == 200
     refresh_token = login.json()["refresh_token"]
 
@@ -233,7 +233,7 @@ def test_users_endpoints_smoke():
 
 
 def test_roles_permissions_resources_actions_events_user_roles_permission_roles_endpoints_smoke():
-    headers, _ = _create_privileged_actor()
+    headers, actor_id = _create_privileged_actor()
 
     role_name = _u("role")
     role_create = client.post("/roles/", headers=headers, json={"name": role_name, "description": "d"})
@@ -284,6 +284,7 @@ def test_roles_permissions_resources_actions_events_user_roles_permission_roles_
         json={
             "name": _u("event"),
             "date": datetime.now(timezone.utc).isoformat(),
+            "owner_id": actor_id,
             "description": "event description",
         },
     )
@@ -319,24 +320,24 @@ def test_roles_permissions_resources_actions_events_user_roles_permission_roles_
     )
 
     permission_role_create = client.post(
-        "/permission-roles/",
+        "/role-permissions/",
         headers=headers,
         json={"role_id": role_id, "permission_id": permission_id},
     )
     assert permission_role_create.status_code == 201
     permission_role_id = permission_role_create.json()["id"]
-    assert client.get("/permission-roles/", headers=headers).status_code == 200
-    assert client.get(f"/permission-roles/{permission_role_id}", headers=headers).status_code == 200
+    assert client.get("/role-permissions/", headers=headers).status_code == 200
+    assert client.get(f"/role-permissions/{permission_role_id}", headers=headers).status_code == 200
     assert (
         client.patch(
-            f"/permission-roles/{permission_role_id}",
+            f"/role-permissions/{permission_role_id}",
             headers=headers,
             json={"role_id": role_id, "permission_id": permission_id},
         ).status_code
         == 200
     )
 
-    assert client.delete(f"/permission-roles/{permission_role_id}", headers=headers).status_code == 204
+    assert client.delete(f"/role-permissions/{permission_role_id}", headers=headers).status_code == 204
     assert client.delete(f"/user-roles/{target_user_id}/{role_id}", headers=headers).status_code == 204
     assert client.delete(f"/events/{event_id}", headers=headers).status_code == 204
     assert client.delete(f"/permissions/{permission_id}", headers=headers).status_code == 204

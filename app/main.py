@@ -24,6 +24,8 @@ async def lifespan(app: FastAPI):
     try:
         # Create default permission for users to read their own profile
         get_or_create_permission(db, "users", "read", "own")
+        for resource in ("products", "items", "documents"):
+            get_or_create_permission(db, resource, "read", "any")
     finally:
         db.close()
     yield
